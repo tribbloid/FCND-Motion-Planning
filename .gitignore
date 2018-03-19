@@ -1,0 +1,23 @@
+.DS_Store
+.cache
+
+# Log files
+Logs
+
+# tmp files
+*.swn
+*.swo
+*.swp
+*~
+
+# python 
+__pycache__/
+*.pyc
+
+# simulator cache
+.sim*
+
+# IntelliJ-IDEA specific
+*.iml
+.idea
+.idea_modules/
