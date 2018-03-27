@@ -16,7 +16,7 @@ class TreeNode(object):
     def cost(self, other: 'TreeNode'):
         return np.linalg.norm(self.vec - other.vec)
 
-def rrtStar(grid, start, goal, r):
+def rrtStar(grid, start, goal, h, r):
     """
     Given a grid and heuristic function returns
     the lowest cost path from start to goal.
@@ -32,16 +32,26 @@ def rrtStar(grid, start, goal, r):
     finished = False
     while(finished):
         p = sample()
-        closest = min(tree, key=lambda v: v.cost(p))
         closestSet: set = filter(lambda v: v.cost(p) <= r, tree)
 
         if closestSet.__len__() <= 0:
+            closest = min(tree, key=lambda v: v.cost(p))
             closestSet.add(closest)
 
         def isReachable(parent: TreeNode) -> bool:
             lines = list(bresenham(*parent.wp, *p.wp))
+            colliding = list(filter(lambda v: grid(lines) >= h, lines))
 
-            if (lines.)
+            return len(colliding) == 0
+
+        reachable = list(filter(isReachable, closestSet))
+        if len(reachable) == 0:
+            pass;
+        else:
+            clo
+
+        closestReachable = min(reachable, key=lambda v: v.cost(p))
+        closestReachable.children += p
 
 
 
