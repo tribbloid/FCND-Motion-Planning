@@ -21,3 +21,6 @@ __pycache__/
 *.iml
 .idea
 .idea_modules/
+
+# pytest
+**/.pytest**

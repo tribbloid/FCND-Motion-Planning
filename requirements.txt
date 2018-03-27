@@ -1,4 +1,8 @@
 git+https://github.com/udacity/udacidrone.git
+numpy>=1.13
 visdom==0.1.7
 bresenham==0.2
 msgpack==0.5.6
+matplotlib
+dataclasses>=0.4
+bresenham >= 0.2
