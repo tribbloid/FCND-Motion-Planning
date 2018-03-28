@@ -49,11 +49,20 @@ class RRTStar:
             colliding = list(filter(lambda v: grid[v] >= h, lines))
             return len(colliding) == 0
 
-        def rewire(p: TreeNode, nearests : set):
+        def rewire(p: TreeNode, nearests : list):
             pass
 
-        finished = False
-        while not finished:
+        def stoppingCondiion(p: TreeNode):
+
+            if isReachable(p, goalNode):
+                tree.add_node(p)
+                tree.add_edge(p, goalNode)
+                return True
+            else:
+                return False
+
+        isFinished = False
+        while not isFinished:
             p = sample()
             nearests = findNearestSet(p)
 
@@ -68,12 +77,11 @@ class RRTStar:
 
                 rewire(p, nearests)
 
-                if isReachable(p, goalNode):
-                    tree.add_node(p)
-                    tree.add_edge(p, goalNode)
-                    finished = True
+                isFinished = stoppingCondiion(p)
 
         path = nx.shortest_path(tree, startNode, goalNode, 'cost')
         pathWP = list(map(lambda v: v.wp, path))
+
+        print("WayPoints: ", pathWP)
 
         return tree, pathWP

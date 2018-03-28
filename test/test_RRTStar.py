@@ -17,7 +17,7 @@ def test_main():
     wpArray = np.asarray(wp)
     # plt.imshow(grid, cmap='Greys', origin='lower')
     plt.pcolor(mesh[0], mesh[1], grid)
-    plt.scatter(wpArray[:, 1], wpArray[:, 0], s=10)
+    plt.plot(wpArray[:, 1], wpArray[:, 0], 'ro-')
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.show()

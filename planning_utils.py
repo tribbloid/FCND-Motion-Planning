@@ -108,10 +108,12 @@ def a_star(grid, h, start, goal):
     found = False
 
     while not queue.empty():
+        # EXPLAIN: get the node that has the lowest cost
         item = queue.get()
         current_cost = item[0]
         current_node = item[1]
 
+        # EXPLAIN: stopping condition, when heuristic=0
         if current_node == goal:
             print('Found a path.')
             found = True
@@ -119,18 +121,22 @@ def a_star(grid, h, start, goal):
         else:
             # Get the new vertexes connected to the current vertex
             for a in valid_actions(grid, current_node):
+                # EXPLAIN: for any adjacent 4 grids that is not colliding with any obstacle
                 next_node = (current_node[0] + a.delta[0], current_node[1] + a.delta[1])
                 new_cost = current_cost + a.cost + h(next_node, goal)
+                # EXPLAIN: total estimated cost of a node = existing cost + expected residual cost approximated by heuristic
 
                 if next_node not in visited:
                     visited.add(next_node)
                     queue.put((new_cost, next_node))
 
+                    #EXPLAIN: add a directed edge/link into the graph
                     branch[next_node] = (new_cost, current_node, a)
 
     if found:
         # retrace steps
         n = goal
+        # starting from the goal and backtrace, append the result into an array
         path_cost = branch[n][0]
         path.append(goal)
         while branch[n][1] != start:
@@ -140,7 +146,8 @@ def a_star(grid, h, start, goal):
     else:
         print('**********************')
         print('Failed to find a path!')
-        print('**********************') 
+        print('**********************')
+    # revert the array
     return path[::-1], path_cost
 
 def heuristic(position, goal_position):
