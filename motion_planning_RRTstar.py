@@ -7,7 +7,7 @@ from udacidrone import global_to_local
 from udacidrone.connection import MavlinkConnection
 
 from motion_planning import MotionPlanning, States
-from planning_utils import a_star, heuristic, create_grid
+from planning_utils import create_grid
 from utils.RRTStar import RRTStar
 
 
@@ -65,13 +65,15 @@ class MotionPlanning_RRTStar(MotionPlanning):
         grid_goal = self.getRandomGoal(grid)
 
         print('Local Start and Goal: ', grid_start, grid_goal)
-        _, path = RRTStar(grid).run(grid_start, grid_goal, 0.5, 10)
+        tree, path = RRTStar(grid).run(grid_start, grid_goal)
         # TODO: prune path to minimize number of waypoints
         # TODO (if you're feeling ambitious): Try a different approach altogether!
         # Convert path to waypoints
-        waypoints = [[p[0] - north_offset, p[1] - east_offset, targetAltitude, 0] for p in path]
+        waypoints = None
+        if path is not None:
+            waypoints = [[p[0] - north_offset, p[1] - east_offset, targetAltitude, 0] for p in path]
         offsets = (north_offset, east_offset, 0)
-        return grid, offsets, waypoints
+        return grid, offsets, waypoints, tree
 
     def getRandomGoal(self, grid):
         # fieldGen = Field2DGen(grid)
