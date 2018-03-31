@@ -19,8 +19,8 @@ __pycache__/
 
 # IntelliJ-IDEA specific
 *.iml
-.idea
+.idea/**
 .idea_modules/
 
 # pytest
-**/.pytest**
+**/.pytest_cache

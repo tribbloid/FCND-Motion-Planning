@@ -22,61 +22,71 @@
 
 #### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  
 
-You're reading it! Below I describe how I addressed each rubric point and where in my code each point is handled.
+Below I describe how I addressed each rubric point and where in my code each point is handled.
 
 ### Explain the Starter Code
 
 #### 1. Explain the functionality of what's provided in `motion_planning.py` and `planning_utils.py`
-These scripts contain a basic planning implementation that includes...
 
-And here's a lovely image of my results (ok this image has nothing to do with it, but it's a nice example of how to include images in your writeup!)
-![Top Down View](./misc/high_up.png)
+The code in motion_planning.py implements the A* algorithm with 2D L2-norm heuristics:
 
-Here's | A | Snappy | Table
---- | --- | --- | ---
-1 | `highlight` | **bold** | 7.41
-2 | a | b | c
-3 | *italic* | text | 403
-4 | 2 | 3 | abcd
+function plan_path() does the following things:
+
+1. read the 2.5D terrain map in colliders.csv and convert it into a 2D occupancy map by using its contour
+ at 3m.
+
+2. translate the 2D map such that its origin resides at the southwest corner, convert it into a grid with no coordinate
+ information to save space.
+
+3. invoke A* algorithm on the grid, get the path on the grid without collision
+
+4. translate the path back into the original cartesian coordinate system
+
+5. upload the path into the drone's waypoint cache, conclude the PLANNING stage and proceed to the next stage.
+
+function a_star() does the following thing:
+
+1. initialize a priority queue representing the visited nodes of the grid/graph
+
+2. initialize a dictionary representing the inverted links between nodes.
+
+3. iteratively apply the algorithm, find the adjacent feasible nodes of all the visited nodes that has the lowest
+estimated cost, visit all of them and estimate their cost using the heuristic.
+
+4. when the iteration hits the goal, terminate and snapshot the dictionary
+
+5. starting from the goal, use the dictionary to trace back to the source.
+
+6. revert the trace and output the solution.
 
 ### Implementing Your Path Planning Algorithm
 
 #### 1. Set your global home position
-Here students should read the first line of the csv file, extract lat0 and lon0 as floating point values and use the self.set_home_position() method to set global home. Explain briefly how you accomplished this in your code.
 
-
-And here is a lovely picture of our downtown San Francisco environment from above!
-![Map of SF](./misc/map.png)
+read the first line, split by space, take the second and forth value and convert them into double type.
 
 #### 2. Set your current local position
-Here as long as you successfully determine your local position relative to global home you'll be all set. Explain briefly how you accomplished this in your code.
 
-
-Meanwhile, here's a picture of me flying through the trees!
-![Forest Flying](./misc/in_the_trees.png)
+retrieve both home and current global position of the drone in geodetic coordinates, convert the current global position into NED (north-east-down) format
 
 #### 3. Set grid start position from local position
-This is another step in adding flexibility to the start location. As long as it works you're good to go!
+
+grid start position is 2D local start position + offset
 
 #### 4. Set grid goal position from geodetic coords
-This step is to add flexibility to the desired goal location. Should be able to choose any (lat, lon) within the map and have it rendered to a goal location on the grid.
+
+use the same global-to-local conversion function on goal geodetic coordinate w.r.t. home geodetic coordinate
 
 #### 5. Modify A* to include diagonal motion (or replace A* altogether)
-Minimal requirement here is to modify the code in planning_utils() to update the A* implementation to include diagonal motions on the grid that have a cost of sqrt(2), but more creative solutions are welcome. Explain the code you used to accomplish this step.
+
+implemented RRT* + 
 
 #### 6. Cull waypoints 
-For this step you can use a collinearity test or ray tracing method like Bresenham. The idea is simply to prune your path of unnecessary waypoints. Explain the code you used to accomplish this step.
 
+Implemented collinearity test based pruning
 
 
 ### Execute the flight
+
 #### 1. Does it work?
 It works!
-
-### Double check that you've met specifications for each of the [rubric](https://review.udacity.com/#!/rubrics/1534/view) points.
-  
-# Extra Challenges: Real World Planning
-
-For an extra challenge, consider implementing some of the techniques described in the "Real World Planning" lesson. You could try implementing a vehicle model to take dynamic constraints into account, or implement a replanning method to invoke if you get off course or encounter unexpected obstacles.
-
-

@@ -1,84 +1,70 @@
 import numpy as np
 from dataclasses import dataclass
-from itertools import product
-import matplotlib.pyplot as plt
 
+# all neighbours
+from utils import grid2Open
 
-def mat3x3():
-    return product(range(-1, 2), range(-1,2))
+neighbours = [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
 
 @dataclass
-class Field2DGen(object):
+class Generate2DField(object):
     grid: np.ndarray
 
-    def buildToClosestBoundary(self, condition=lambda v: v >= 0.5):
+    def __post_init__(self):
+        self.shape = self.grid.shape
+        self.field = np.zeros((*self.shape, 2), np.int)
+        self.coverage = np.zeros((*self.shape, 2), np.int)
+
+        # initialize open & visited set, open set assuming sparseness
+        self.openSet: list = grid2Open(self.grid, self.condition)
+        self.visitedSet: np.ndarray = self.condition(self.grid)
+
+    @staticmethod
+    def condition(v) -> bool:
+        return v > 0.5
+
+    def nearestGrid(self):
         """
         vector field representing shortest displace to move to white space
         :return:
         """
-        grid = self.grid
 
-        shape = grid.shape
-        fieldShape = (*shape, 2)
-        field = np.zeros(fieldShape, np.int)
+        def updateOnce(_epoch: int):
+            nextOpenSet = list()
+            print("epoch", _epoch)
+            for (i, j) in self.openSet:
+                # print("propagating", i, j)
+                for di, dj in neighbours:
+                    iTilde = i + di
+                    jTilde = j + dj
 
-        def isBlack(i, j): # TODO: as a param
-            return condition(grid[i, j])
+                    if 0 <= iTilde < self.shape[0] and 0 <= jTilde < self.shape[1]:
+                        isVisited = self.visitedSet[iTilde, jTilde]
+                        if not isVisited:
+                            vector = self.field[i, j, :] + [di, dj]
 
-        # initialize open & visited set, open set assuming sparseness
-        _open: list = []
-        _visited: np.ndarray = np.zeros(shape, np.bool)
-        for (i,j), _ in np.ndenumerate(grid):
-            if not isBlack(i,j):
-                _open.append((i,j))
-                _visited[i,j] = True
+                            self.field[iTilde, jTilde, :] = vector
 
-        def updateOnce():
-            nonlocal _open
-            nonlocal _visited
+                            nextOpenSet.append((iTilde, jTilde))
+                            self.visitedSet[iTilde, jTilde] = True
 
-            nextOpen = []
-
-            for (i, j) in _open:
-                for di, dj in mat3x3():
-                    ii = i + di
-                    jj = j + dj
-
-                    existingNorm = None
-                    if 0 <= ii < np.size(_visited, 0) and 0 <= jj < np.size(_visited, 1):
-                        isVisited = _visited[ii, jj]
-                        if isVisited:
-                            existingVector = field[ii, jj, :]
-                            existingNorm = np.linalg.norm(existingVector)
-
-                        vector = field[i, j, :] + [di, dj]
-
-                        # take the smaller one
-                        if existingNorm is None:
-                            field[ii, jj, :] = vector
-                            nextOpen.append((ii, jj))
-                            _visited[ii, jj] = True
-                        elif np.linalg.norm(vector) < existingNorm:
-                            field[ii, jj, :] = vector
+                            self.coverage[iTilde, jTilde] = _epoch
 
             # plot(field, _open)
-            _open = nextOpen
+            self.openSet = nextOpenSet
 
-        while len(_open) > 0:
-            updateOnce()
+        epoch = 1
+        while len(self.openSet) > 0:
+            updateOnce(epoch)
+            epoch += 1
 
-        return field
+        return self.field
 
-
-def plot(field=None, points=None):
-    if field is not None:
-        plt.quiver(field[:,:,1], field[:,:,0])
-    if points is not None:
-        x = list(map(lambda v: v[1], points))
-        y = list(map(lambda v: v[0], points))
-        plt.scatter(x, y, s=20)
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    # plt.close()
-    plt.show()
+    # def repulsion(self):
+    #     nearest = self.nearestGrid()
+    #
+    #     def nearest2repulsion(v: np.array) -> tuple:
+    #         dist = dist(v)
+    #
+    #     nearestTuples = np.apply_along_axis()

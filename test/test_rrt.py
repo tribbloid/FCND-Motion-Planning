@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from udacidrone import Drone
 from udacidrone.connection import Connection
 
 from motion_planning_RRTstar import MotionPlanning_RRTStar
 
 dummyConn = Connection(False)
 
-def _runTest(drone: Drone):
+def _runTest(drone: MotionPlanning_RRTStar):
     # drone = MotionPlanning_RRTStar(dummyConn)
 
     grid, offsets, wp, tree = drone.planPathImpl()

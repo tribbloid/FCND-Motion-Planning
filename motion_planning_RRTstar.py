@@ -7,8 +7,8 @@ from udacidrone import global_to_local
 from udacidrone.connection import MavlinkConnection
 
 from motion_planning import MotionPlanning, States
-from planning_utils import create_grid
-from utils.RRTStar import RRTStar
+from utils import generateGrid
+from utils.rrt import RRTStar
 
 
 class MotionPlanning_RRTStar(MotionPlanning):
@@ -18,7 +18,7 @@ class MotionPlanning_RRTStar(MotionPlanning):
         print("Searching for a path ...")
 
         # Set self.waypoints
-        _, wp = self.planPathImpl()
+        _, _, wp, _ = self.planPathImpl()
         self.waypoints = wp
         print(self.waypoints)
         # TODO: send waypoints to sim
@@ -35,8 +35,8 @@ class MotionPlanning_RRTStar(MotionPlanning):
             firstLine = file.readline()
         finally:
             file.close()
-        splitted = firstLine.strip('\n').split(',')
-        lat0, lon0 = map(lambda v: v.split(' ')[-1], splitted)
+        splited = firstLine.strip('\n').split(',')
+        lat0, lon0 = map(lambda v: v.split(' ')[-1], splited)
 
         # set home position to (lat0, lon0, 0)
         self.set_home_position(lon0, lat0, 0)
@@ -47,14 +47,7 @@ class MotionPlanning_RRTStar(MotionPlanning):
 
         print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
                                                                          self.local_position))
-        # Read in obstacle map
-        data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=3)
-        # Determine offsets between grid and map
-        north_offset = int(np.abs(np.min(data[:, 0])))
-        east_offset = int(np.abs(np.min(data[:, 1])))
-        print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
-        # Define a grid for a particular altitude and safety margin around obstacles
-        grid = create_grid(data, targetAltitude, safetyDistance)
+        grid, east_offset, north_offset = generateGrid(safetyDistance, targetAltitude)
 
         # Define starting point on the grid (this is just grid center)
         # TODO: convert start position to current position rather than map center
@@ -75,7 +68,8 @@ class MotionPlanning_RRTStar(MotionPlanning):
         offsets = (north_offset, east_offset, 0)
         return grid, offsets, waypoints, tree
 
-    def getRandomGoal(self, grid):
+    @staticmethod
+    def getRandomGoal(grid):
         # fieldGen = Field2DGen(grid)
         # field = fieldGen.buildToClosestBoundary(lambda v: v >= 0.5)
         # grid_goal = (grid_start[0] + 10, grid_start[1] + 10)

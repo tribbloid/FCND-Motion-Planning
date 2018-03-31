@@ -1,12 +1,14 @@
 import math
 import os
 import random
-from typing import List, Set
+from typing import List
 
 import networkx as nx
 import numpy as np
 from bresenham import bresenham
 from dataclasses import dataclass
+
+from utils import grid2Open
 
 COST = 'cost'
 MAX_ITR = 2000
@@ -14,17 +16,19 @@ MAX_ITR = 2000
 
 @dataclass
 class TreeNode(object):
-    wp: tuple = (0, 0)
+    wp: tuple = None
 
     def __post_init__(self):
+        if self. wp is None:
+            self.wp = (0, 0)
         self.vec = np.array(self.wp)
         self.cumCostMnemonic = None
 
     def __hash__(self):
         return self.wp.__hash__()
 
-    def cost(self, next: 'TreeNode'):
-        return math.sqrt(np.linalg.norm(self.vec - next.vec))
+    def cost(self, to: 'TreeNode'):
+        return math.sqrt(np.linalg.norm(self.vec - to.vec))
 
     # calculate recursively (lazily)
     def cumCost(self, tree: nx.DiGraph):
@@ -48,17 +52,26 @@ class TreeNode(object):
 @dataclass
 class RRTStar:
     grid: np.ndarray
-    h: int = 0.5
+    gamma = 1000
 
-    def sample(self, openSet: Set[tuple]) -> TreeNode:
-        v = random.sample(openSet, 1)[0]
-        openSet.remove(v)
+    @staticmethod
+    def condition(v) -> bool:
+        return v <= 0.5
+
+    def __post_init__(self):
+        self.openSet = set(grid2Open(self.grid, self.condition))
+
+    def sample(self, goal: TreeNode) -> TreeNode:
+        v = random.sample(self.openSet, 1)[0]
+        self.openSet.remove(v)
         return TreeNode(v)
 
     def isReachable(self, a: TreeNode, b: TreeNode) -> bool:
-        lines: list = list(bresenham(*a.wp, *b.wp))
-        colliding = list(filter(lambda v: self.grid[v] >= self.h, lines))
-        return len(colliding) == 0
+        line = bresenham(*a.wp, *b.wp)
+        for pixel in line:
+            if not self.condition(self.grid[pixel]):
+                return False
+        return True
 
     def rewire(self, p: TreeNode, nearests: List[TreeNode], tree: nx.DiGraph):
         for nearest in nearests:
@@ -75,20 +88,17 @@ class RRTStar:
                     for successor in ss:
                         successor.cumCostMnemonic = None
 
-    def run(self, start, goal, gamma=1000):
-        grid = self.grid
+    def run(self, start, goal):
         tree: nx.DiGraph = nx.DiGraph()
         startNode = TreeNode(start)
         goalNode = TreeNode(goal)
         tree.add_node(startNode)
 
-        ii = np.argwhere(grid < self.h)
-        openSet = set(list(map(lambda v: tuple(v), ii)))
-
         n = 1
+
         def findNearestSet(p: TreeNode):
             nonlocal n
-            r = gamma * ((math.log(n) / n) ** (1/2))
+            r = self.gamma * ((math.log(n) / n) ** (1/2))
             ll = list(filter(lambda v: v.cost(p) <= r, tree.nodes))
 
             if len(ll) <= 0:
@@ -98,6 +108,7 @@ class RRTStar:
 
         decreasingCosts = []
         firstSolution = None
+
         def stoppingCondition(p: TreeNode):
             nonlocal decreasingCosts
             nonlocal firstSolution
@@ -125,12 +136,12 @@ class RRTStar:
 
         isSolved = False
         while not isSolved and n < MAX_ITR:
-            p = self.sample(openSet)
+            p = self.sample(goalNode)
             nearests = findNearestSet(p)
 
             reachable = list(filter(lambda v: self.isReachable(v, p), nearests))
             if len(reachable) == 0:
-                pass
+                print("fruitless iteration", n)
             else:
                 closestParent = min(reachable, key=lambda v: v.cost(p))
 
@@ -156,3 +167,27 @@ class RRTStar:
             print('Failed to find a path!')
             print('**********************')
             return tree, None
+
+
+class P_RRTStar(RRTStar):
+    _lambda: float = 1.0
+    k = 5
+
+    # def __post_init__(self):
+    #     super(P_RRTStar, self).__post_init__()
+    #     self.potentialField =
+
+    def sample(self, goal: TreeNode) -> TreeNode:
+        vInit = random.sample(self.openSet, 1)[0]
+        attraction = (goal.vec - np.array(vInit)) * self._lambda
+
+        v = vInit
+        for i in range(0, self.k):
+            vNext = v + attraction
+            if vNext in self.openSet:
+                v = vNext
+            else:
+                break
+
+        self.openSet.remove(v)
+        return TreeNode(v)
