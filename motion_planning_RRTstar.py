@@ -7,7 +7,7 @@ from udacidrone import global_to_local
 from udacidrone.connection import MavlinkConnection
 
 from motion_planning import MotionPlanning, States
-from utils import generateGrid
+from utils import loadGrid
 from utils.rrt import RRTStar
 
 
@@ -18,15 +18,15 @@ class MotionPlanning_RRTStar(MotionPlanning):
         print("Searching for a path ...")
 
         # Set self.waypoints
-        _, _, wp, _ = self.planPathImpl()
+        _, _, wp, _, _, _ = self.planPathImpl()
         self.waypoints = wp
-        print(self.waypoints)
+        # print(self.waypoints)
         # TODO: send waypoints to sim
         self.send_waypoints()
 
     def planPathImpl(self,
-                     safetyDistance=5,
-                     targetAltitude=3
+                     safetyDistance=3,
+                     targetAltitude=5
                      ):
 
         #  read lat0, lon0 from colliders into floating point values
@@ -36,10 +36,10 @@ class MotionPlanning_RRTStar(MotionPlanning):
         finally:
             file.close()
         splited = firstLine.strip('\n').split(',')
-        lat0, lon0 = map(lambda v: v.split(' ')[-1], splited)
+        lat0, lon0 = map(lambda v: float(v.split(' ')[-1]), splited)
 
-        # set home position to (lat0, lon0, 0)
-        self.set_home_position(lon0, lat0, 0)
+        # set home position to (lon0, lat0, 0)
+        self.set_home_position(lon0, lat0, 0.0)
 
         # retrieve current global position
         # convert to current local position using global_to_local()
@@ -47,7 +47,7 @@ class MotionPlanning_RRTStar(MotionPlanning):
 
         print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
                                                                          self.local_position))
-        grid, east_offset, north_offset = generateGrid(safetyDistance, targetAltitude)
+        grid, east_offset, north_offset = loadGrid(safetyDistance, targetAltitude)
 
         # Define starting point on the grid (this is just grid center)
         # TODO: convert start position to current position rather than map center

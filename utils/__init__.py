@@ -4,7 +4,7 @@ from typing import List
 from planning_utils import create_grid
 
 
-def generateGrid(safetyDistance=5, targetAltitude=3):
+def loadGrid(safetyDistance=5, targetAltitude=3):
     # Read in obstacle map
     data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=3)
     # Determine offsets between grid and map

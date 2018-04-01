@@ -1,12 +1,14 @@
 import math
 import os
 import random
-from typing import List
+from queue import PriorityQueue
+from typing import List, Any, Union
 
 import networkx as nx
 import numpy as np
 from bresenham import bresenham
 from dataclasses import dataclass
+from networkx import DiGraph
 
 from utils import grid2Open
 
@@ -14,7 +16,7 @@ COST = 'cost'
 MAX_ITR = 2000
 
 
-@dataclass
+@dataclass(order=True)
 class TreeNode(object):
     wp: tuple = None
 
@@ -27,7 +29,7 @@ class TreeNode(object):
     def __hash__(self):
         return self.wp.__hash__()
 
-    def cost(self, to: 'TreeNode'):
+    def cost(self, to: 'TreeNode') -> float:
         return math.sqrt(np.linalg.norm(self.vec - to.vec))
 
     # calculate recursively (lazily)
@@ -59,6 +61,8 @@ class RRTStar:
         return v <= 0.5
 
     def __post_init__(self):
+        vecCondition = np.vectorize(self.condition)
+        self._grid = vecCondition(self.grid)
         self.openSet = set(grid2Open(self.grid, self.condition))
 
         self.tree: nx.DiGraph = nx.DiGraph()
@@ -71,18 +75,23 @@ class RRTStar:
     def isReachable(self, a: TreeNode, b: TreeNode) -> bool:
         line = bresenham(*a.wp, *b.wp)
         for pixel in line:
-            if not self.condition(self.grid[pixel]):
+            if not self._grid[pixel]:
                 return False
         return True
 
-    def selectBestParent(self, p, reachable):
-        closestParent = min(reachable, key=lambda v: v.cost(p))
-        # closestParent = min(reachable, key=lambda v: v.cumCost(self.tree) + v.cost(p)) # TODO: which one is correct?
-        return closestParent
+    def selectBestParent(self, p, nearests, n):
 
-    def rewire(self, p: TreeNode, nearests: List[TreeNode]):
+        for d, node in nearests:
+            if self.isReachable(node, p):
+                print("iteration", n, "nearest size=", len(nearests), "reachable")
+                return node
+
+        print("iteration", n, "nearest size=", len(nearests), "unreachable")
+        return None
+
+    def rewire(self, p: TreeNode, nearests: List[tuple]):
         tree = self.tree
-        for nearest in nearests:
+        for _, nearest in nearests:
             if self.isReachable(p, nearest):
                 oldCumCost = nearest.cumCost(tree)
                 newCumCost = p.cumCost(tree) + p.cost(nearest)
@@ -100,19 +109,30 @@ class RRTStar:
         startNode = TreeNode(start)
         goalNode = TreeNode(goal)
 
-        tree = self.tree
+        tree: DiGraph = self.tree
         tree.add_node(startNode)
 
         n = 1
 
         def findNearestSet(p: TreeNode):
             nonlocal n
-            r = self.gamma * ((math.log(n) / n) ** (1/2))
-            ll = list(filter(lambda v: v.cost(p) <= r, tree.nodes))
+            r: float = self.gamma * ((math.log(n) / n) ** 0.5)
+
+            sorted: PriorityQueue = PriorityQueue(len(tree.nodes))
+            min = (None, None)
+            for node in tree.nodes:
+                cost: float = node.cost(p)
+                if not (type(cost) is float):
+                    print("error!")
+                if cost <= r:
+                    sorted.put((cost, node))
+                if min[0] is None or min[0] > cost:
+                    min = (cost, node)
+
+            ll = sorted.queue
 
             if len(ll) <= 0:
-                closest = min(tree.nodes, key=lambda v: v.cost(p))
-                ll.append(closest)
+                ll.append(min)
             return ll
 
         decreasingCosts = []
@@ -133,7 +153,7 @@ class RRTStar:
                 currentCost = goalNode.cumCost(tree)
                 decreasingCosts.append(currentCost)
 
-                print("iteration", n, "\tsolved: cost =", currentCost)
+                print("\tsolved: cost =", currentCost)
                 # stop when the cost doesn't decrease for 10 iterations
                 if len(decreasingCosts) > stationaryObjectiveCap and\
                         decreasingCosts[-stationaryObjectiveCap] == currentCost:
@@ -144,7 +164,6 @@ class RRTStar:
                 else:
                     return False
             else:
-                print("iteration", n)
                 return False
 
         isSolved = False
@@ -152,15 +171,13 @@ class RRTStar:
             p = self.sample(goalNode)
             nearests = findNearestSet(p)
 
-            reachable = list(filter(lambda v: self.isReachable(v, p), nearests))
-            if len(reachable) == 0:
-                print("fruitless iteration", n)
+            selected = self.selectBestParent(p, nearests, n)
+            if selected is None:
+                pass
             else:
-                closestParent = self.selectBestParent(p, reachable)
-
-                cost = closestParent.cost(p)
+                cost = selected.cost(p)
                 tree.add_node(p)
-                tree.add_edge(closestParent, p, attr={'cost', cost})
+                tree.add_edge(selected, p, attr={'cost', cost})
 
                 self.rewire(p, nearests)
 
@@ -178,12 +195,14 @@ class RRTStar:
         else:
             print('**********************')
             print('Failed to find a path!')
+            print("start:", start, "goal:", goal)
             print('**********************')
             return tree, None
 
 
 class P_RRTStar(RRTStar):
-    _lambda: float = 0.05
+    _lambdaAttraction: float = 0.05
+    _lambdaRepulsion: float = 0.05
     k = 10
 
     # def __post_init__(self):
@@ -193,7 +212,7 @@ class P_RRTStar(RRTStar):
     def sample(self, goal: TreeNode) -> TreeNode:
         while True:
             vInit = random.sample(self.openSet, 1)[0]
-            attraction = (goal.vec - np.array(vInit)) * self._lambda
+            attraction = (goal.vec - np.array(vInit)) * self._lambdaAttraction
 
             v = vInit
             for i in range(0, self.k):
@@ -201,7 +220,7 @@ class P_RRTStar(RRTStar):
                 vNext = tuple(vDelta.astype(np.int))
                 # assert (0 <= vNext[0] <= self.grid.shape[0]) and (1 <= vNext[1] <= self.grid.shape[1]),\
                 #     "%r = %r + %r, goal=%r" % (vDelta, v, attraction, goal.vec)
-                if self.condition(self.grid[vNext]):
+                if self._grid[vNext]:
                     v = vNext
                 else:
                     break

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import generateGrid
+from utils import loadGrid
 from utils.field import Generate2DField
 
 
@@ -10,7 +10,7 @@ def test_buildField():
     # grid = np.zeros((20, 30), np.int)
     # grid[6,5:8] = 1
 
-    grid, _, _ = generateGrid()
+    grid, _, _ = loadGrid()
 
     gen = Generate2DField(grid)
     field = gen.nearestGrid()

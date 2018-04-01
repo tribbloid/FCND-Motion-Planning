@@ -1,6 +1,8 @@
+import argparse
+
 import matplotlib.pyplot as plt
 import numpy as np
-from udacidrone.connection import Connection
+from udacidrone.connection import Connection, MavlinkConnection
 
 from motion_planning_P_RRTstar import MotionPlanning_P_RRTStar
 from motion_planning_RRTstar import MotionPlanning_RRTStar
@@ -41,9 +43,19 @@ def _runTest(drone: MotionPlanning_RRTStar):
     plt.show()
 
 
+conn = dummyConn
+
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--port', type=int, default=5760, help='Port number')
+# parser.add_argument('--host', type=str, default='127.0.0.1', help="host address, i.e. '127.0.0.1'")
+# args = parser.parse_known_args()[0]
+#
+# conn = MavlinkConnection('tcp:{0}:{1}'.format(args.host, args.port), timeout=60)
+
+
 def test_RRT():
-    _runTest(MotionPlanning_RRTStar(dummyConn))
+    _runTest(MotionPlanning_RRTStar(conn))
 
 
 def test_P_RRT():
-    _runTest(MotionPlanning_P_RRTStar(dummyConn))
+    _runTest(MotionPlanning_P_RRTStar(conn))
