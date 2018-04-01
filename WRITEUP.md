@@ -75,16 +75,35 @@ grid start position is 2D local start position + offset
 
 #### 4. Set grid goal position from geodetic coords
 
-use the same global-to-local conversion function on goal geodetic coordinate w.r.t. home geodetic coordinate
+use the same global-to-local conversion function on the random goal geodetic coordinate w.r.t. home geodetic coordinate (since I cannot find the range of the geodetic coordinate anywhere, I generate a random local coordinate on the map). If the local coordinate is in the building, move it to the closest open space.
 
 #### 5. Modify A* to include diagonal motion (or replace A* altogether)
 
-implemented RRT* + 
+The source code gives implementations of 2 algorithms for 2D planning: RRT* (in motion_planning_RRTstar.py) and the almost state-of-the-art P-RRT* (in motion_planning_P_RRTstar.py), an RRT* variant with a potential field guided sampling bias, it is described in [this article](https://arxiv.org/pdf/1704.00264).
 
-#### 6. Cull waypoints 
+Hyperparemeters:
 
-Implemented collinearity test based pruning
+- safetyDistance = 3m
+- targetAltitude = 5m
+- gamma/nearest point balls scale = 200m
+- lambdaAttraction/attraction force coefficient in sampling bias = 0.5
+- lambdaRepulsion/repulsion force coefficient in sampling bias = 0.5
 
+The following 2 plots gives an example of generated path/graph:
+
+- RRT*:
+
+![RRT*](./misc/rrtStar.png)
+
+- P-RRT*
+
+![P-RRT*](./misc/p-rrtStar.png)
+
+#### 6. Cull waypoints
+
+Both algorithms asymptotically converge to shortest path, so theoretically this is not required.
+
+However in test runs I observed unnecessary waypoints being inserted that increase the total length, is it necessary to add a path pruning/smoothing step after RRT* is finished?
 
 ### Execute the flight
 

@@ -119,7 +119,7 @@ class RRTStar:
         def findNearestSet(p: TreeNode):
             nonlocal n
             r: float = self.gamma * ((math.log(n) / n) ** 0.5)
-            print("r =", r)
+            print("\tr =", r)
 
             sorted: PriorityQueue = PriorityQueue(len(tree.nodes))
             min = (None, None)
@@ -205,7 +205,7 @@ class RRTStar:
 
 class P_RRTStar(RRTStar):
     _lambdaAttraction: float = 0.05
-    _lambdaRepulsion: float = 0.05
+    _lambdaRepulsion: float = 0
     k = 10
 
     # def __post_init__(self):
