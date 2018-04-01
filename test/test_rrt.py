@@ -2,14 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from udacidrone.connection import Connection
 
+from motion_planning_P_RRTstar import MotionPlanning_P_RRTStar
 from motion_planning_RRTstar import MotionPlanning_RRTStar
 
 dummyConn = Connection(False)
 
+
 def _runTest(drone: MotionPlanning_RRTStar):
     # drone = MotionPlanning_RRTStar(dummyConn)
 
-    grid, offsets, wp, tree = drone.planPathImpl()
+    grid, offsets, wp, tree, grid_start, grid_goal = drone.planPathImpl()
     mesh = np.meshgrid(
         range(- offsets[1], - offsets[1] + np.size(grid, 0)),
         range(- offsets[0], - offsets[0] + np.size(grid, 1))
@@ -24,6 +26,10 @@ def _runTest(drone: MotionPlanning_RRTStar):
         plt.plot([aa[1], bb[1]],
                  [aa[0], bb[0]], 'g-')
 
+    start = np.array(grid_start) - np.array(offsets)[[0,1]]
+    goal = np.array(grid_goal) - np.array(offsets)[[0,1]]
+    start2GoalArray = np.array([start, goal])
+    plt.plot(start2GoalArray[:, 1], start2GoalArray[:, 0], 'wo-')
     try:
         wpArray = np.asarray(wp)
         plt.plot(wpArray[:, 1], wpArray[:, 0], 'ro-')
@@ -34,5 +40,10 @@ def _runTest(drone: MotionPlanning_RRTStar):
     plt.ylabel('Y')
     plt.show()
 
+
 def test_RRT():
     _runTest(MotionPlanning_RRTStar(dummyConn))
+
+
+def test_P_RRT():
+    _runTest(MotionPlanning_P_RRTStar(dummyConn))

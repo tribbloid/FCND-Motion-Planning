@@ -61,6 +61,8 @@ class RRTStar:
     def __post_init__(self):
         self.openSet = set(grid2Open(self.grid, self.condition))
 
+        self.tree: nx.DiGraph = nx.DiGraph()
+
     def sample(self, goal: TreeNode) -> TreeNode:
         v = random.sample(self.openSet, 1)[0]
         self.openSet.remove(v)
@@ -73,7 +75,13 @@ class RRTStar:
                 return False
         return True
 
-    def rewire(self, p: TreeNode, nearests: List[TreeNode], tree: nx.DiGraph):
+    def selectBestParent(self, p, reachable):
+        closestParent = min(reachable, key=lambda v: v.cost(p))
+        # closestParent = min(reachable, key=lambda v: v.cumCost(self.tree) + v.cost(p)) # TODO: which one is correct?
+        return closestParent
+
+    def rewire(self, p: TreeNode, nearests: List[TreeNode]):
+        tree = self.tree
         for nearest in nearests:
             if self.isReachable(p, nearest):
                 oldCumCost = nearest.cumCost(tree)
@@ -89,9 +97,10 @@ class RRTStar:
                         successor.cumCostMnemonic = None
 
     def run(self, start, goal):
-        tree: nx.DiGraph = nx.DiGraph()
         startNode = TreeNode(start)
         goalNode = TreeNode(goal)
+
+        tree = self.tree
         tree.add_node(startNode)
 
         n = 1
@@ -113,6 +122,8 @@ class RRTStar:
             nonlocal decreasingCosts
             nonlocal firstSolution
 
+            stationaryObjectiveCap = 100
+
             if self.isReachable(p, goalNode) and firstSolution is None:
                 tree.add_node(goalNode)
                 tree.add_edge(p, goalNode)
@@ -124,9 +135,11 @@ class RRTStar:
 
                 print("iteration", n, "\tsolved: cost =", currentCost)
                 # stop when the cost doesn't decrease for 10 iterations
-                if len(decreasingCosts) > 100 and decreasingCosts[-100] == currentCost:
+                if len(decreasingCosts) > stationaryObjectiveCap and\
+                        decreasingCosts[-stationaryObjectiveCap] == currentCost:
                     return True
-                elif len(decreasingCosts) >= 1000:
+                    # return False # for debugging only
+                elif n >= MAX_ITR - 1:
                     return True
                 else:
                     return False
@@ -143,13 +156,13 @@ class RRTStar:
             if len(reachable) == 0:
                 print("fruitless iteration", n)
             else:
-                closestParent = min(reachable, key=lambda v: v.cost(p))
+                closestParent = self.selectBestParent(p, reachable)
 
                 cost = closestParent.cost(p)
                 tree.add_node(p)
                 tree.add_edge(closestParent, p, attr={'cost', cost})
 
-                self.rewire(p, nearests, tree)
+                self.rewire(p, nearests)
 
                 isSolved = stoppingCondition(p)
 
@@ -170,24 +183,30 @@ class RRTStar:
 
 
 class P_RRTStar(RRTStar):
-    _lambda: float = 1.0
-    k = 5
+    _lambda: float = 0.05
+    k = 10
 
     # def __post_init__(self):
     #     super(P_RRTStar, self).__post_init__()
     #     self.potentialField =
 
     def sample(self, goal: TreeNode) -> TreeNode:
-        vInit = random.sample(self.openSet, 1)[0]
-        attraction = (goal.vec - np.array(vInit)) * self._lambda
+        while True:
+            vInit = random.sample(self.openSet, 1)[0]
+            attraction = (goal.vec - np.array(vInit)) * self._lambda
 
-        v = vInit
-        for i in range(0, self.k):
-            vNext = v + attraction
-            if vNext in self.openSet:
-                v = vNext
-            else:
-                break
+            v = vInit
+            for i in range(0, self.k):
+                vDelta = v + attraction
+                vNext = tuple(vDelta.astype(np.int))
+                # assert (0 <= vNext[0] <= self.grid.shape[0]) and (1 <= vNext[1] <= self.grid.shape[1]),\
+                #     "%r = %r + %r, goal=%r" % (vDelta, v, attraction, goal.vec)
+                if self.condition(self.grid[vNext]):
+                    v = vNext
+                else:
+                    break
 
-        self.openSet.remove(v)
-        return TreeNode(v)
+            # print(i)
+            if v in self.openSet:
+                self.openSet.remove(v)
+                return TreeNode(v)

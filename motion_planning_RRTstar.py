@@ -58,7 +58,8 @@ class MotionPlanning_RRTStar(MotionPlanning):
         grid_goal = self.getRandomGoal(grid)
 
         print('Local Start and Goal: ', grid_start, grid_goal)
-        tree, path = RRTStar(grid).run(grid_start, grid_goal)
+
+        path, tree = self.getPath(grid, grid_goal, grid_start)
         # TODO: prune path to minimize number of waypoints
         # TODO (if you're feeling ambitious): Try a different approach altogether!
         # Convert path to waypoints
@@ -66,7 +67,12 @@ class MotionPlanning_RRTStar(MotionPlanning):
         if path is not None:
             waypoints = [[p[0] - north_offset, p[1] - east_offset, targetAltitude, 0] for p in path]
         offsets = (north_offset, east_offset, 0)
-        return grid, offsets, waypoints, tree
+        return grid, offsets, waypoints, tree, grid_start, grid_goal
+
+    @staticmethod
+    def getPath(grid, grid_goal, grid_start):
+        tree, path = RRTStar(grid).run(grid_start, grid_goal)
+        return path, tree
 
     @staticmethod
     def getRandomGoal(grid):
