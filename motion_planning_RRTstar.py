@@ -8,6 +8,7 @@ from udacidrone.connection import MavlinkConnection
 
 from motion_planning import MotionPlanning, States
 from utils import loadGrid
+from utils.field import FieldGen
 from utils.rrt import RRTStar
 
 
@@ -19,9 +20,13 @@ class MotionPlanning_RRTStar(MotionPlanning):
 
         # Set self.waypoints
         _, _, wp, _, _, _ = self.planPathImpl()
-        self.waypoints = wp
-        # print(self.waypoints)
-        # TODO: send waypoints to sim
+        wpCanonized = []
+        for coord in wp:
+            cc = []
+            for x in coord:
+                cc.append(int(x))
+            wpCanonized.append(cc)
+        self.waypoints = wpCanonized
         self.send_waypoints()
 
     def planPathImpl(self,
@@ -48,6 +53,7 @@ class MotionPlanning_RRTStar(MotionPlanning):
         print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
                                                                          self.local_position))
         grid, east_offset, north_offset = loadGrid(safetyDistance, targetAltitude)
+        fieldGen = FieldGen(grid, lambda v: v < 0.5)
 
         # Define starting point on the grid (this is just grid center)
         # TODO: convert start position to current position rather than map center
@@ -55,11 +61,11 @@ class MotionPlanning_RRTStar(MotionPlanning):
 
         # Set goal as some arbitrary position on the grid
         # adapt to set goal as latitude / longitude position and convert
-        grid_goal = self.getRandomGoal(grid)
+        grid_goal = self.getRandomGoal(fieldGen)
 
         print('Local Start and Goal: ', grid_start, grid_goal)
 
-        path, tree = self.getPath(grid, grid_goal, grid_start)
+        path, tree = self.getPath(fieldGen, grid_goal, grid_start)
         # TODO: prune path to minimize number of waypoints
         # TODO (if you're feeling ambitious): Try a different approach altogether!
         # Convert path to waypoints
@@ -70,23 +76,24 @@ class MotionPlanning_RRTStar(MotionPlanning):
         return grid, offsets, waypoints, tree, grid_start, grid_goal
 
     @staticmethod
-    def getPath(grid, grid_goal, grid_start):
-        tree, path = RRTStar(grid).run(grid_start, grid_goal)
+    def getPath(fieldGen, grid_goal, grid_start):
+        tree, path = RRTStar(fieldGen).run(grid_start, grid_goal)
         return path, tree
 
     @staticmethod
-    def getRandomGoal(grid):
-        # fieldGen = Field2DGen(grid)
-        # field = fieldGen.buildToClosestBoundary(lambda v: v >= 0.5)
-        # grid_goal = (grid_start[0] + 10, grid_start[1] + 10)
-        caps = (
+    def getRandomGoal(fieldGen):
+        grid = fieldGen.grid
+        range = (
             np.size(grid, 0),
             np.size(grid, 1)
         )
-        while True:
-            proposal = tuple(map(lambda v: random.randint(0, v), caps))
-            if grid[proposal[0], proposal[1]] == 0:
-                return proposal
+
+        proposal = tuple(map(lambda v: random.randint(0, v), range))
+        nearestField = fieldGen.nearest()
+        offsetVec = nearestField[proposal]
+        final = tuple(np.array(proposal) - np.array(offsetVec))
+        assert grid[final[0], final[1]] == 0
+        return final
 
 
 if __name__ == "__main__":

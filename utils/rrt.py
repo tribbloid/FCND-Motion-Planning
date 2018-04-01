@@ -2,7 +2,7 @@ import math
 import os
 import random
 from queue import PriorityQueue
-from typing import List, Any, Union
+from typing import List
 
 import networkx as nx
 import numpy as np
@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from networkx import DiGraph
 
 from utils import grid2Open
+from utils.field import FieldGen
 
 COST = 'cost'
 MAX_ITR = 2000
@@ -53,8 +54,8 @@ class TreeNode(object):
 
 @dataclass
 class RRTStar:
-    grid: np.ndarray
-    gamma = 1000
+    fieldGen: FieldGen
+    gamma = 200
 
     @staticmethod
     def condition(v) -> bool:
@@ -62,8 +63,9 @@ class RRTStar:
 
     def __post_init__(self):
         vecCondition = np.vectorize(self.condition)
-        self._grid = vecCondition(self.grid)
-        self.openSet = set(grid2Open(self.grid, self.condition))
+        grid = self.fieldGen.grid
+        self._grid = vecCondition(grid)
+        self.openSet = set(grid2Open(grid, self.condition))
 
         self.tree: nx.DiGraph = nx.DiGraph()
 
@@ -117,6 +119,7 @@ class RRTStar:
         def findNearestSet(p: TreeNode):
             nonlocal n
             r: float = self.gamma * ((math.log(n) / n) ** 0.5)
+            print("r =", r)
 
             sorted: PriorityQueue = PriorityQueue(len(tree.nodes))
             min = (None, None)

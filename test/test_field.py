@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from utils import loadGrid
-from utils.field import Generate2DField
+from utils.field import FieldGen
 
 
 def test_buildField():
@@ -12,8 +12,8 @@ def test_buildField():
 
     grid, _, _ = loadGrid()
 
-    gen = Generate2DField(grid)
-    field = gen.nearestGrid()
+    gen = FieldGen(grid)
+    field = gen.nearest()
 
     # plt.imshow(grid, cmap='Greys', origin='lower')
     # quiver(field)

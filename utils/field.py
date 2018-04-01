@@ -2,33 +2,40 @@ import numpy as np
 from dataclasses import dataclass
 
 # all neighbours
+from typing import Callable
+
 from utils import grid2Open
 
 neighbours = [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
 
+def defaultCondition(v) -> bool:
+    return v > 0.5
+
+
 @dataclass
-class Generate2DField(object):
+class FieldGen(object):
     grid: np.ndarray
+    condition: Callable = defaultCondition
 
     def __post_init__(self):
         self.shape = self.grid.shape
-        self.field = np.zeros((*self.shape, 2), np.int)
+        self._nearest = np.zeros((*self.shape, 2), np.int)
         self.coverage = np.zeros((*self.shape, 2), np.int)
 
         # initialize open & visited set, open set assuming sparseness
         self.openSet: list = grid2Open(self.grid, self.condition)
         self.visitedSet: np.ndarray = self.condition(self.grid)
+        self.generated = False
 
-    @staticmethod
-    def condition(v) -> bool:
-        return v > 0.5
 
-    def nearestGrid(self):
+    def nearest(self):
         """
         vector field representing shortest displace to move to white space
         :return:
         """
+        if self.generated is True:
+            return self._nearest
 
         def updateOnce(_epoch: int):
             nextOpenSet = list()
@@ -42,9 +49,9 @@ class Generate2DField(object):
                     if 0 <= iTilde < self.shape[0] and 0 <= jTilde < self.shape[1]:
                         isVisited = self.visitedSet[iTilde, jTilde]
                         if not isVisited:
-                            vector = self.field[i, j, :] + [di, dj]
+                            vector = self._nearest[i, j, :] + [di, dj]
 
-                            self.field[iTilde, jTilde, :] = vector
+                            self._nearest[iTilde, jTilde, :] = vector
 
                             nextOpenSet.append((iTilde, jTilde))
                             self.visitedSet[iTilde, jTilde] = True
@@ -59,7 +66,8 @@ class Generate2DField(object):
             updateOnce(epoch)
             epoch += 1
 
-        return self.field
+        self.generated = True
+        return self._nearest
 
     # def repulsion(self):
     #     nearest = self.nearestGrid()

@@ -18,4 +18,9 @@ def loadGrid(safetyDistance=5, targetAltitude=3):
 
 def grid2Open(grid, condition) -> List[tuple]:
     ii = np.argwhere(condition(grid))
-    return list(map(lambda v: tuple(v), ii))
+
+    def toTuple(vs) -> tuple:
+        return tuple(vs)
+
+    result = list(map(toTuple, ii))
+    return result
