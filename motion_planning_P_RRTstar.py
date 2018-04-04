@@ -9,9 +9,8 @@ from utils.rrt import P_RRTStar
 
 class MotionPlanning_P_RRTStar(MotionPlanning_RRTStar):
 
-    @staticmethod
-    def getPath(fieldGen, grid_goal, grid_start):
-        tree, path = P_RRTStar(fieldGen).run(grid_start, grid_goal)
+    def getPath(self, grid_goal, grid_start):
+        tree, path = P_RRTStar(self.fieldGen).run(grid_start, grid_goal)
         return path, tree
 
 

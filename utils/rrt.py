@@ -108,8 +108,8 @@ class RRTStar:
                         successor.cumCostMnemonic = None
 
     def run(self, start, goal):
-        startNode = TreeNode(start)
-        goalNode = TreeNode(goal)
+        startNode = TreeNode(tuple(start))
+        goalNode = TreeNode(tuple(goal))
 
         tree: DiGraph = self.tree
         tree.add_node(startNode)
