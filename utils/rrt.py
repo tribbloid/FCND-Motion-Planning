@@ -175,12 +175,13 @@ class RRTStar:
             nearests = findNearestSet(p)
 
             selected = self.selectBestParent(p, nearests, n)
+
             if selected is None:
                 pass
             else:
                 cost = selected.cost(p)
                 tree.add_node(p)
-                tree.add_edge(selected, p, attr={'cost', cost})
+                tree.add_edge(selected, p, attr={COST, cost})
 
                 self.rewire(p, nearests)
 
@@ -190,7 +191,20 @@ class RRTStar:
 
         if isSolved:
             path = nx.shortest_path(tree, startNode, goalNode, COST)
-            pathWP = list(map(lambda v: v.wp, path))
+
+            # path pruning
+            numWPs = len(path)
+            for i in range(0, numWPs):
+                for j in range(i + 1, numWPs):
+                    _from = path[i]
+                    _to = path[j]
+                    if self.isReachable(_from, _to):
+                        cost = _from.cost(_to)
+                        tree.add_edge(_from, _to, attr={COST: cost})
+
+            optimizedPath = nx.shortest_path(tree, startNode, goalNode, COST)
+
+            pathWP = list(map(lambda v: v.wp, optimizedPath))
 
             print("WayPoints: ", pathWP)
 
